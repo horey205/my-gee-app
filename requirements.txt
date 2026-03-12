@@ -1,0 +1,8 @@
+streamlit
+earthengine-api
+folium
+streamlit-folium
+pandas
+plotly
+setuptools==69.5.1
+python-box==6.1.0
