@@ -34,34 +34,28 @@ def init_ee():
         # 1. 단일 JSON 뭉치 방식 (가장 권장: GEE_JSON_KEY 하나에 파일 내용 전체 입력)
         if "GEE_JSON_KEY" in st.secrets:
             key_data = st.secrets["GEE_JSON_KEY"]
+            
+            # 데이터 타입 판별 및 로드
             if isinstance(key_data, str):
                 key_dict = json.loads(key_data)
             else:
                 key_dict = key_data
             
-            # private_key 내부의 공백 및 특수문자 정제
-            if 'private_key' in key_dict:
-                key_dict['private_key'] = key_dict['private_key'].strip()
+            # **핵심 수정**: key_data에는 JSON 전체가 아닌 'private_key' 문자열만 들어가야 함
+            email = key_dict['client_email']
+            p_key = key_dict['private_key'].replace('\\n', '\n').strip()
+            p_id = key_dict.get('project_id', project_id)
             
-            credentials = ee.ServiceAccountCredentials(
-                key_dict['client_email'], 
-                key_data=json.dumps(key_dict)
-            )
-            ee.Initialize(credentials, project=key_dict.get('project_id', project_id))
+            credentials = ee.ServiceAccountCredentials(email, key_data=p_key)
+            ee.Initialize(credentials, project=p_id)
             
         # 2. 개별 필드 방식 (하위 호환성)
         elif "private_key" in st.secrets:
             email = st.secrets["client_email"]
             p_id = st.secrets.get("project_id", project_id)
-            raw_key = st.secrets["private_key"]
+            p_key = st.secrets["private_key"].replace('\\n', '\n').strip()
             
-            # PEM 형식 수동 정제
-            clean_key = raw_key.replace('\\n', '\n').strip()
-            # ASN.1 에러 방지를 위해 헤더/푸터 외 불필요한 공백 제거
-            lines = [line.strip() for line in clean_key.split('\n') if line.strip()]
-            clean_key = '\n'.join(lines)
-            
-            credentials = ee.ServiceAccountCredentials(email, key_data=clean_key)
+            credentials = ee.ServiceAccountCredentials(email, key_data=p_key)
             ee.Initialize(credentials, project=p_id)
             
         # 3. 로컬 테스트용
@@ -72,7 +66,7 @@ def init_ee():
                 ee.data._credentials = MockCredentials()
     except Exception as e:
         st.error(f"인증 오류 발생: {e}")
-        st.info("💡 가장 확실한 해결 방법: Streamlit Secrets에 'GEE_JSON_KEY'라는 이름으로 JSON 키 파일의 내용 전체를 복사해서 넣어주세요.")
+        st.info("💡 해결 방법: Streamlit Secrets에 'GEE_JSON_KEY'라는 이름으로 JSON 파일 내용 전체를 다시 한 번 정확히 넣어주세요.")
 
 init_ee()
 
