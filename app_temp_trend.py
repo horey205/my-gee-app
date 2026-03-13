@@ -32,14 +32,20 @@ def init_ee():
         # 1. 서버 배포용
         if "GEE_JSON_KEY" in st.secrets:
             key_data = st.secrets["GEE_JSON_KEY"]
-            try:
-                key_dict = json.loads(key_data)
-                credentials = ee.ServiceAccountCredentials(key_dict['client_email'], key_data=key_data)
-                ee.Initialize(credentials, project=project_id)
-                # st.success("서버 인증 성공!") # 성공시 메시지는 지저분할 수 있으니 생략
-            except Exception as inner_e:
-                st.error(f"JSON 키 해석 오류: {inner_e}")
-                st.info("Secrets에 붙여넣은 내용이 유효한 JSON 형식인지 확인해주세요.")
+            
+            # 데이터 타입 판별 및 처리
+            if isinstance(key_data, str):
+                try:
+                    key_dict = json.loads(key_data)
+                except:
+                    # JSON 형식이 아닐 경우 (TOML에서 이미 파싱된 경우)
+                    key_dict = key_data 
+            else:
+                key_dict = key_data
+            
+            # 서비스 계정 인증 실행
+            credentials = ee.ServiceAccountCredentials(key_dict['client_email'], key_data=json.dumps(key_dict))
+            ee.Initialize(credentials, project=project_id)
                 
         # 2. 로컬 테스트용
         else:
@@ -48,10 +54,9 @@ def init_ee():
                 class MockCredentials: pass
                 ee.data._credentials = MockCredentials()
     except Exception as e:
-        st.error(f"인증 오류 상세: {e}")
-        # 로컬 대응
+        st.error(f"인증 오류 발생: {e}")
+        # 로컬 환경 대응
         if "GEE_JSON_KEY" not in st.secrets:
-            st.info("로컬 환경에서 인증을 시도합니다...")
             try:
                 ee.Authenticate()
                 ee.Initialize(project=project_id)
