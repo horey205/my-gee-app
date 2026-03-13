@@ -30,9 +30,12 @@ def init_ee():
     try:
         # 1. 서버 배포용 (개별 필드 로딩)
         if "private_key" in st.secrets:
+            # \n 문자를 실제 줄바꿈으로 변환 (PEM 로딩 오류 방지 핵심!)
+            private_key = st.secrets["private_key"].replace('\\n', '\n')
+            
             credentials = ee.ServiceAccountCredentials(
                 st.secrets["client_email"],
-                key_data=st.secrets["private_key"]
+                key_data=private_key
             )
             ee.Initialize(credentials, project=st.secrets["project_id"])
         
