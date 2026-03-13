@@ -28,32 +28,51 @@ st.sidebar.info(
 @st.cache_resource
 def init_ee():
     try:
-        # 1. 서버 배포용 (Secrets 사용)
-        if "private_key" in st.secrets:
-            # 낱개 필드로 들어오든 JSON 뭉치로 들어오든 상관없이 처리
-            email = st.secrets.get("client_email")
-            p_id = st.secrets.get("project_id", "basic-perigee-384507")
-            raw_key = st.secrets.get("private_key")
+        # 기본 프로젝트 ID
+        project_id = 'basic-perigee-384507'
+        
+        # 1. 단일 JSON 뭉치 방식 (가장 권장: GEE_JSON_KEY 하나에 파일 내용 전체 입력)
+        if "GEE_JSON_KEY" in st.secrets:
+            key_data = st.secrets["GEE_JSON_KEY"]
+            if isinstance(key_data, str):
+                key_dict = json.loads(key_data)
+            else:
+                key_dict = key_data
             
-            # 키 정제 (가장 중요한 부분: 오타나 서식 자동 수리)
+            # private_key 내부의 공백 및 특수문자 정제
+            if 'private_key' in key_dict:
+                key_dict['private_key'] = key_dict['private_key'].strip()
+            
+            credentials = ee.ServiceAccountCredentials(
+                key_dict['client_email'], 
+                key_data=json.dumps(key_dict)
+            )
+            ee.Initialize(credentials, project=key_dict.get('project_id', project_id))
+            
+        # 2. 개별 필드 방식 (하위 호환성)
+        elif "private_key" in st.secrets:
+            email = st.secrets["client_email"]
+            p_id = st.secrets.get("project_id", project_id)
+            raw_key = st.secrets["private_key"]
+            
+            # PEM 형식 수동 정제
             clean_key = raw_key.replace('\\n', '\n').strip()
-            if not clean_key.startswith('-----BEGIN'):
-                clean_key = clean_key.replace(' ', '\n') # 혹시나 공백으로 변했을 경우 대비
+            # ASN.1 에러 방지를 위해 헤더/푸터 외 불필요한 공백 제거
+            lines = [line.strip() for line in clean_key.split('\n') if line.strip()]
+            clean_key = '\n'.join(lines)
             
             credentials = ee.ServiceAccountCredentials(email, key_data=clean_key)
             ee.Initialize(credentials, project=p_id)
             
-        # 2. 로컬 테스트용
+        # 3. 로컬 테스트용
         else:
-            project_id = 'basic-perigee-384507'
             ee.Initialize(project=project_id)
             if not hasattr(ee.data, '_credentials'):
                 class MockCredentials: pass
                 ee.data._credentials = MockCredentials()
     except Exception as e:
         st.error(f"인증 오류 발생: {e}")
-        # 오류 상세 설명 가이드
-        st.info("💡 해결 방법: Streamlit Secrets 설정에서 client_email, project_id, private_key 값이 정확한지 확인해 주세요.")
+        st.info("💡 가장 확실한 해결 방법: Streamlit Secrets에 'GEE_JSON_KEY'라는 이름으로 JSON 키 파일의 내용 전체를 복사해서 넣어주세요.")
 
 init_ee()
 
