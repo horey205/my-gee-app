@@ -28,18 +28,24 @@ st.sidebar.info(
 @st.cache_resource
 def init_ee():
     try:
-        # 1. 서버 배포용 (개별 필드 로딩)
-        if "private_key" in st.secrets:
-            # \n 문자를 실제 줄바꿈으로 변환 (PEM 로딩 오류 방지 핵심!)
-            private_key = st.secrets["private_key"].replace('\\n', '\n')
+        # 1. Base64 방식 (줄바꿈/특수문자 오류 완벽 방지)
+        if "GEE_BASE64" in st.secrets:
+            import base64
+            decoded_key = base64.b64decode(st.secrets["GEE_BASE64"]).decode('utf-8')
+            key_dict = json.loads(decoded_key)
+            credentials = ee.ServiceAccountCredentials(key_dict['client_email'], key_data=decoded_key)
+            ee.Initialize(credentials, project=key_dict['project_id'])
             
+        # 2. 기존 개별 필드 방식 (하위 호환성 유지)
+        elif "private_key" in st.secrets:
+            private_key = st.secrets["private_key"].replace('\\n', '\n')
             credentials = ee.ServiceAccountCredentials(
                 st.secrets["client_email"],
                 key_data=private_key
             )
             ee.Initialize(credentials, project=st.secrets["project_id"])
         
-        # 2. 로컬 테스트용
+        # 3. 로컬 테스트용
         else:
             project_id = 'basic-perigee-384507'
             ee.Initialize(project=project_id)
@@ -49,7 +55,7 @@ def init_ee():
     except Exception as e:
         st.error(f"인증 오류 발생: {e}")
         # 로컬 환경 대응
-        if "private_key" not in st.secrets:
+        if "private_key" not in st.secrets and "GEE_BASE64" not in st.secrets:
             try:
                 ee.Authenticate()
                 ee.Initialize(project='basic-perigee-384507')
