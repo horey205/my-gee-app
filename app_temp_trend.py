@@ -27,28 +27,18 @@ st.sidebar.info(
 # GEE 초기화 (서버/로컬용 통합 로직)
 @st.cache_resource
 def init_ee():
-    project_id = 'basic-perigee-384507'
     try:
-        # 1. 서버 배포용
-        if "GEE_JSON_KEY" in st.secrets:
-            key_data = st.secrets["GEE_JSON_KEY"]
-            
-            # 데이터 타입 판별 및 처리
-            if isinstance(key_data, str):
-                try:
-                    key_dict = json.loads(key_data)
-                except:
-                    # JSON 형식이 아닐 경우 (TOML에서 이미 파싱된 경우)
-                    key_dict = key_data 
-            else:
-                key_dict = key_data
-            
-            # 서비스 계정 인증 실행
-            credentials = ee.ServiceAccountCredentials(key_dict['client_email'], key_data=json.dumps(key_dict))
-            ee.Initialize(credentials, project=project_id)
-                
+        # 1. 서버 배포용 (개별 필드 로딩)
+        if "private_key" in st.secrets:
+            credentials = ee.ServiceAccountCredentials(
+                st.secrets["client_email"],
+                key_data=st.secrets["private_key"]
+            )
+            ee.Initialize(credentials, project=st.secrets["project_id"])
+        
         # 2. 로컬 테스트용
         else:
+            project_id = 'basic-perigee-384507'
             ee.Initialize(project=project_id)
             if not hasattr(ee.data, '_credentials'):
                 class MockCredentials: pass
@@ -56,10 +46,10 @@ def init_ee():
     except Exception as e:
         st.error(f"인증 오류 발생: {e}")
         # 로컬 환경 대응
-        if "GEE_JSON_KEY" not in st.secrets:
+        if "private_key" not in st.secrets:
             try:
                 ee.Authenticate()
-                ee.Initialize(project=project_id)
+                ee.Initialize(project='basic-perigee-384507')
             except: pass
 
 init_ee()
