@@ -28,24 +28,22 @@ st.sidebar.info(
 @st.cache_resource
 def init_ee():
     try:
-        # 1. Base64 방식 (줄바꿈/특수문자 오류 완벽 방지)
-        if "GEE_BASE64" in st.secrets:
-            import base64
-            decoded_key = base64.b64decode(st.secrets["GEE_BASE64"]).decode('utf-8')
-            key_dict = json.loads(decoded_key)
-            credentials = ee.ServiceAccountCredentials(key_dict['client_email'], key_data=decoded_key)
-            ee.Initialize(credentials, project=key_dict['project_id'])
+        # 1. 서버 배포용 (Secrets 사용)
+        if "private_key" in st.secrets:
+            # 낱개 필드로 들어오든 JSON 뭉치로 들어오든 상관없이 처리
+            email = st.secrets.get("client_email")
+            p_id = st.secrets.get("project_id", "basic-perigee-384507")
+            raw_key = st.secrets.get("private_key")
             
-        # 2. 기존 개별 필드 방식 (하위 호환성 유지)
-        elif "private_key" in st.secrets:
-            private_key = st.secrets["private_key"].replace('\\n', '\n')
-            credentials = ee.ServiceAccountCredentials(
-                st.secrets["client_email"],
-                key_data=private_key
-            )
-            ee.Initialize(credentials, project=st.secrets["project_id"])
-        
-        # 3. 로컬 테스트용
+            # 키 정제 (가장 중요한 부분: 오타나 서식 자동 수리)
+            clean_key = raw_key.replace('\\n', '\n').strip()
+            if not clean_key.startswith('-----BEGIN'):
+                clean_key = clean_key.replace(' ', '\n') # 혹시나 공백으로 변했을 경우 대비
+            
+            credentials = ee.ServiceAccountCredentials(email, key_data=clean_key)
+            ee.Initialize(credentials, project=p_id)
+            
+        # 2. 로컬 테스트용
         else:
             project_id = 'basic-perigee-384507'
             ee.Initialize(project=project_id)
@@ -54,12 +52,8 @@ def init_ee():
                 ee.data._credentials = MockCredentials()
     except Exception as e:
         st.error(f"인증 오류 발생: {e}")
-        # 로컬 환경 대응
-        if "private_key" not in st.secrets and "GEE_BASE64" not in st.secrets:
-            try:
-                ee.Authenticate()
-                ee.Initialize(project='basic-perigee-384507')
-            except: pass
+        # 오류 상세 설명 가이드
+        st.info("💡 해결 방법: Streamlit Secrets 설정에서 client_email, project_id, private_key 값이 정확한지 확인해 주세요.")
 
 init_ee()
 
