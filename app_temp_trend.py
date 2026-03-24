@@ -208,11 +208,8 @@ elif mode == "GEDI 산림 정밀 분석":
                 region = point.buffer(2000).bounds() # 2km 영역
                 
                 # 원본 수치 raw_data를 이용해 통계 계산 (정밀도 상향: scale 1000 -> 30)
-                # 평균(Mean)과 최대값(Max)을 동시에 추출
-                reducers = ee.Reducer.mean().combine(
-                    reducer=ee.Reducer.max(),
-                    sharedInputs=True
-                )
+                # 평균(Mean)과 최대값(Max)을 동시에 추출 (표준 API 문법 적용)
+                reducers = ee.Reducer.mean().combine(ee.Reducer.max(), '', True)
                 
                 stat = raw_data.reduceRegion(
                     reducer=reducers,
