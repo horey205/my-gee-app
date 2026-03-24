@@ -207,26 +207,36 @@ elif mode == "GEDI 산림 정밀 분석":
                 point = ee.Geometry.Point([calc_loc[1], calc_loc[0]])
                 region = point.buffer(2000).bounds() # 2km 영역
                 
-                # 원본 수치 raw_data를 이용해 통계 계산
+                # 원본 수치 raw_data를 이용해 통계 계산 (정밀도 상향: scale 1000 -> 30)
+                # 평균(Mean)과 최대값(Max)을 동시에 추출
+                reducers = ee.Reducer.mean().combine(
+                    reducer=ee.Reducer.max(),
+                    sharedInputs=True
+                )
+                
                 stat = raw_data.reduceRegion(
-                    reducer=ee.Reducer.mean(),
+                    reducer=reducers,
                     geometry=region,
-                    scale=1000,
+                    scale=30, # GEDI 발자국 크기에 맞춘 정밀 분석
                     maxPixels=1e9
                 )
                 
-                # rh98 또는 elev_lowestmode 키 동적으로 가져오기
-                keys = stat.keys().getInfo()
-                if keys:
-                    val = stat.get(keys[0]).getInfo()
-                    if val is not None:
-                        st.metric(label=f"주변 {analysis_type} 평균", value=f"{val:.2f} m")
-                    else:
-                        st.warning("데이터가 없는 구역입니다.")
+                # 결과 가져오기
+                res = stat.getInfo()
+                if res and any(val is not None for val in res.values()):
+                    # 키 이름 동적 매칭 (rh98_mean, rh98_max 등)
+                    mean_key = next((k for k in res.keys() if 'mean' in k.lower()), None)
+                    max_key = next((k for k in res.keys() if 'max' in k.lower()), None)
+                    
+                    if mean_key and res[mean_key] is not None:
+                        st.metric(label=f"주변 {analysis_type} 평균", value=f"{res[mean_key]:.2f} m")
+                    
+                    if max_key and res[max_key] is not None:
+                        st.metric(label=f"영역 내 최고 높이 (Peak)", value=f"{res[max_key]:.2f} m")
                 else:
-                    st.warning("데이터 로딩 중...")
+                    st.warning("데이터가 없는 구역입니다 (위성 궤도 밖).")
         except Exception as e:
-            st.error(f"통계 추출 오류: {e}")
+            st.error(f"정밀 분석 오류: {e}")
 
         st.divider()
 
