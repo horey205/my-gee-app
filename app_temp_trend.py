@@ -46,10 +46,21 @@ def init_ee():
         # 2. Streamlit Secrets (배포 환경용)
         if "GEE_JSON_KEY" in st.secrets:
             key_data = st.secrets["GEE_JSON_KEY"]
-            if isinstance(key_data, str): key_dict = json.loads(key_data)
-            else: key_dict = key_data
+            
+            # 딕셔너리 또는 문자열(JSON) 형태 모두 지원
+            if isinstance(key_data, str):
+                import json
+                key_dict = json.loads(key_data)
+            else:
+                key_dict = key_data
+            
             email = key_dict['client_email']
-            p_key = key_dict['private_key'].replace('\\n', '\n').strip()
+            p_key = key_dict['private_key']
+            
+            # 비공개 키 형식 정규화 (줄바꿈 인식 개선)
+            if isinstance(p_key, str):
+                p_key = p_key.replace('\\n', '\n').strip()
+            
             credentials = ee.ServiceAccountCredentials(email, key_data=p_key)
             ee.Initialize(credentials, project=PROJECT_ID)
             return True
