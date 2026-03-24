@@ -238,15 +238,22 @@ elif mode == "GEDI 산림 정밀 분석":
         st.divider()
 
         # 2. 데이터 내보내기 (CSV Export)
-        st.markdown("📂 **리다 정밀 데이터 추출** (주변 500m)")
+        st.markdown("📂 **라이다(Lidar) 정밀 데이터 추출** (현재 화면 영역)")
         if st.button("📊 CSV 파일 생성 및 다운로드"):
             try:
-                with st.spinner("위성 발자국(Footprints) 데이터를 추출 중..."):
-                    # 현재 영역에서 최대 500개의 지점 샘플링
+                with st.spinner("화면 내 모든 위성 궤도 데이터를 추출 중..."):
+                    # 현재 지도의 화면 영역(Bounds) 가져오기
+                    export_region = region # 기본값 (500m)
+                    if map_output and map_output.get("bounds"):
+                        sw = map_output["bounds"]["_southWest"]
+                        ne = map_output["bounds"]["_northEast"]
+                        export_region = ee.Geometry.Rectangle([sw["lng"], sw["lat"], ne["lng"], ne["lat"]])
+                    
+                    # 샘플링 개수를 늘려 화면 내 모든 노선을 포함 (최대 10,000개)
                     samples = raw_data.sample(
-                        region=region,
+                        region=export_region,
                         scale=30,
-                        numPixels=500,
+                        numPixels=10000,
                         geometries=True
                     )
                     
@@ -258,7 +265,6 @@ elif mode == "GEDI 산림 정밀 분석":
                         for f in features:
                             coords = f['geometry']['coordinates']
                             props = f['properties']
-                            # 첫 번째 속성값(높이 또는 고도) 가져오기
                             val = list(props.values())[0] if props else 0
                             data_list.append({
                                 'Latitude': coords[1],
@@ -270,15 +276,15 @@ elif mode == "GEDI 산림 정밀 분석":
                         df_export = pd.DataFrame(data_list)
                         csv = df_export.to_csv(index=False).encode('utf-8-sig')
                         
-                        st.success(f"✅ 총 {len(df_export)}개의 관측점을 추출했습니다!")
+                        st.success(f"✅ 화면 영역에서 총 {len(df_export)}개의 관측점을 추출했습니다!")
                         st.download_button(
                             label="📥 CSV 파일 내 컴퓨터로 저장",
                             data=csv,
-                            file_name=f"GEDI_{selected_area}_{analysis_type}.csv",
+                            file_name=f"GEDI_Lidar_{selected_area}_{analysis_type}.csv",
                             mime="text/csv",
                         )
                     else:
-                        st.warning("이 구역에는 추출할 위성 관측값이 없습니다.")
+                        st.warning("화면 영역 내에 유효한 위성 관측값이 없습니다 (지도를 옮겨보세요).")
             except Exception as e:
                 st.error(f"데이터 추출 중 오류: {e}")
 
