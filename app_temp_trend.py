@@ -144,9 +144,10 @@ elif mode == "GEDI 산림 정밀 분석":
         if analysis_type == "수관 상단 높이 (Canopy Height)":
             # rh98: 98th percentile of relative height (Top of canopy)
             data_layer = dataset.select('rh98').mean()
+            # 팔레트 개선: 검은색 느낌이 어두운 파란색 대신 밝은 녹색 계열 사용
             vis_params = {
-                'min': 0, 'max': 40, 
-                'palette': ['darkblue', 'blue', 'cyan', 'green', 'yellow', 'orange', 'red']
+                'min': 0, 'max': 50, 
+                'palette': ['#f7fcf5', '#c7e9c0', '#74c476', '#238b45', '#ffffcc', '#fed976', '#fd8d3c', '#bd0026']
             }
             label = "Canopy Height (m)"
         else:
@@ -213,13 +214,13 @@ elif mode == "GEDI 산림 정밀 분석":
         st.markdown("**🎨 색상 범례 (m)**")
         if analysis_type == "수관 상단 높이 (Canopy Height)":
             legend_html = """
-            <div style="font-size: 12px; margin-bottom: 5px;">
-                <span style="background:red; padding: 2px 10px;"></span> 35m+ (높은 숲)<br>
-                <span style="background:orange; padding: 2px 10px;"></span> 25~35m<br>
-                <span style="background:yellow; padding: 2px 10px;"></span> 15~25m (중급 숲)<br>
-                <span style="background:green; padding: 2px 10px;"></span> 5~15m<br>
-                <span style="background:cyan; padding: 2px 10px;"></span> 0~5m (낮은 지대)<br>
-                <span style="background:blue; padding: 2px 10px;"></span> 수역/데이터 없음
+            <div style="font-size: 13px; font-weight: bold;">
+                <span style="background:#bd0026; padding: 2px 10px; color:white;"></span> 40m+ (매우 높은 숲)<br>
+                <span style="background:#fd8d3c; padding: 2px 10px;"></span> 30~40m<br>
+                <span style="background:#fed976; padding: 2px 10px;"></span> 20~30m (일반 숲)<br>
+                <span style="background:#ffffcc; padding: 2px 10px;"></span> 10~20m (낮은 숲)<br>
+                <span style="background:#74c476; padding: 2px 10px;"></span> 0~10m (관목/지면)<br>
+                <span style="background:#f7fcf5; border:1px solid gray; padding: 2px 10px;"></span> 0m (데이터 없음)
             </div>
             """
             st.markdown(legend_html, unsafe_allow_html=True)
