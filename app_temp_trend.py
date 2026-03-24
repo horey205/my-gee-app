@@ -237,7 +237,54 @@ elif mode == "GEDI 산림 정밀 분석":
 
         st.divider()
 
-        # 2. 색상 범례(Legend) 추가
+        # 2. 데이터 내보내기 (CSV Export)
+        st.markdown("📂 **리다 정밀 데이터 추출** (주변 500m)")
+        if st.button("📊 CSV 파일 생성 및 다운로드"):
+            try:
+                with st.spinner("위성 발자국(Footprints) 데이터를 추출 중..."):
+                    # 현재 영역에서 최대 500개의 지점 샘플링
+                    samples = raw_data.sample(
+                        region=region,
+                        scale=30,
+                        numPixels=500,
+                        geometries=True
+                    )
+                    
+                    # 피처 리스트 가져오기
+                    features = samples.getInfo()['features']
+                    
+                    if features:
+                        data_list = []
+                        for f in features:
+                            coords = f['geometry']['coordinates']
+                            props = f['properties']
+                            # 첫 번째 속성값(높이 또는 고도) 가져오기
+                            val = list(props.values())[0] if props else 0
+                            data_list.append({
+                                'Latitude': coords[1],
+                                'Longitude': coords[0],
+                                f'{analysis_type} (m)': val
+                            })
+                        
+                        import pandas as pd
+                        df_export = pd.DataFrame(data_list)
+                        csv = df_export.to_csv(index=False).encode('utf-8-sig')
+                        
+                        st.success(f"✅ 총 {len(df_export)}개의 관측점을 추출했습니다!")
+                        st.download_button(
+                            label="📥 CSV 파일 내 컴퓨터로 저장",
+                            data=csv,
+                            file_name=f"GEDI_{selected_area}_{analysis_type}.csv",
+                            mime="text/csv",
+                        )
+                    else:
+                        st.warning("이 구역에는 추출할 위성 관측값이 없습니다.")
+            except Exception as e:
+                st.error(f"데이터 추출 중 오류: {e}")
+
+        st.divider()
+
+        # 3. 색상 범례(Legend) 추가
         st.markdown("**🎨 색상 범례 (m)**")
         if analysis_type == "수관 상단 높이 (Canopy Height)":
             legend_html = """
