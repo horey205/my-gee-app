@@ -145,19 +145,20 @@ elif mode == "GEDI 산림 정밀 분석":
             # selfMask()로 데이터가 없는 지점(0 또는 null)을 투명하게 처리 (검은 배경 제거)
             data_layer = dataset.select('rh98').mean().selfMask()
             
-            # 팔레트 개선: 검은색 느낌이 없는 선명하고 밝은 색상 (연두-녹색-노랑-주황-빨강)
+            # 하얀색처럼 보이는 아주 밝은 색상을 제외하고 선명한 유색 팔레트 적용 (GEE 표준 헥사)
             vis_params = {
-                'min': 3, # 3m 이하의 지면 노이즈 제외
-                'max': 45, 
-                'palette': ['#d9f0a3', '#78c679', '#238b45', '#ffff33', '#fe9929', '#e31a1c']
+                'min': 3,   # 3m 이하 노이즈 제외
+                'max': 45,  
+                'palette': ['228b22', '32cd32', 'ffff00', 'ff8c00', 'ff0000'] 
+                # 진녹색(Forest) - 연녹색(Lime) - 노랑 - 주황 - 빨강
             }
             label = "Canopy Height (m)"
         else:
-            # 지면 고도 데이터도 투명화 및 시각화 개선
+            # 지면 고도 데이터도 투명화 및 시각화 개선 (표준 헥사)
             data_layer = dataset.select('elev_lowestmode').mean().selfMask()
             vis_params = {
                 'min': 0, 'max': 1500, 
-                'palette': ['#0000ff', '#00ffff', '#ffff00', '#ff0000', '#ffffff'] # 고도에 따른 색상 시퀀스
+                'palette': ['0000ff', '00ffff', 'ffff00', 'ff0000', 'ffffff']
             }
             label = "Elevation (m)"
 
