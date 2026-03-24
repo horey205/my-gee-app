@@ -140,26 +140,28 @@ elif mode == "GEDI 산림 정밀 분석":
         # GEDI 데이터 로드 (L2A Monthly)
         dataset = ee.ImageCollection("LARSE/GEDI/GEDI02_A_002_MONTHLY")
         
-        # 최신 데이터 위주로 평균값 계산
+        # 최신 데이터 위주로 평균값 처리 및 서버 사이드 시각화
         if analysis_type == "수관 상단 높이 (Canopy Height)":
-            # selfMask()로 데이터가 없는 지점(0 또는 null)을 투명하게 처리 (검은 배경 제거)
-            data_layer = dataset.select('rh98').mean().selfMask()
+            # 1. 원본 데이터 선택 및 배경 투명화
+            raw_data = dataset.select('rh98').mean().selfMask()
             
-            # 하얀색처럼 보이는 아주 밝은 색상을 제외하고 선명한 유색 팔레트 적용 (GEE 표준 헥사)
-            vis_params = {
-                'min': 3,   # 3m 이하 노이즈 제외
-                'max': 45,  
-                'palette': ['228b22', '32cd32', 'ffff00', 'ff8c00', 'ff0000'] 
-                # 진녹색(Forest) - 연녹색(Lime) - 노랑 - 주황 - 빨강
-            }
+            # 2. 서버에서 직접 색상을 입힘 (visualize) - 이 방식이 가장 확실함
+            data_layer = raw_data.visualize(
+                min=3, 
+                max=45, 
+                palette=['green', 'lime', 'yellow', 'orange', 'red']
+            )
+            vis_params = {} # visualize를 썼으므로 비움
             label = "Canopy Height (m)"
         else:
-            # 지면 고도 데이터도 투명화 및 시각화 개선 (표준 헥사)
-            data_layer = dataset.select('elev_lowestmode').mean().selfMask()
-            vis_params = {
-                'min': 0, 'max': 1500, 
-                'palette': ['0000ff', '00ffff', 'ffff00', 'ff0000', 'ffffff']
-            }
+            # 지면 고도 데이터도 동일하게 서버 사이드 시각화 적용
+            raw_elev = dataset.select('elev_lowestmode').mean().selfMask()
+            data_layer = raw_elev.visualize(
+                min=0, 
+                max=1500, 
+                palette=['blue', 'cyan', 'green', 'yellow', 'red']
+            )
+            vis_params = {} # visualize를 썼으므로 비움
             label = "Elevation (m)"
 
         # 지도 설정
