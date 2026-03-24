@@ -153,11 +153,12 @@ elif mode == "GEDI 산림 정밀 분석":
             )
             label = "Canopy Height (m)"
         else:
-            # 지면 고도 데이터도 계산용과 표시용 분리
-            raw_data = dataset.select('elev_lowestmode').mean().selfMask()
+            # 지면 고도 데이터도 계산용과 표시용 분리 (피트-미터 단위 변환 추가)
+            # GEDI L2A Monthly Elevation은 Feet 단위이므로 0.3048을 곱해 Meter로 변환
+            raw_data = dataset.select('elev_lowestmode').mean().multiply(0.3048).selfMask()
             data_to_map = raw_data.visualize(
                 min=0, 
-                max=1500, 
+                max=1800, 
                 palette=['blue', 'cyan', 'green', 'yellow', 'red']
             )
             label = "Elevation (m)"
