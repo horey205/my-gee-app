@@ -175,18 +175,60 @@ elif mode == "GEDI 산림 정밀 분석":
         folium_static(m_gedi, height=650)
 
     with col2:
-        st.subheader("📊 지역 정보")
+        st.subheader("📊 정밀 분석 지표")
         st.write(f"**현재 위치:** {selected_area}")
-        st.write(f"**데이터 원천:** NASA GEDI L2A (V2.1)")
-        
-        if analysis_type == "수관 상단 높이 (Canopy Height)":
-            st.info("💡 **RH98 이란?**\n레이저 반사파 중 상위 98% 지점의 높이로, 실질적인 수목의 키를 나타냅니다.")
-            st.warning("붉은색일수록 나무의 키가 크고(최대 40m 이상), 푸른색일수록 나무가 낮음을 의미합니다.")
-        else:
-            st.info("💡 **Elev Lowest Mode**\n지면에 도달한 레이저가 반사된 지점의 고도(해발 고도)를 나타냅니다.")
+        st.write(f"**데이터:** NASA GEDI (Latest)")
+        st.divider()
+
+        # 1. 중심점 기준 수치 추출 및 대시보드 표시
+        try:
+            with st.spinner("수치 데이터를 계산 중..."):
+                point = ee.Geometry.Point([loc[1], loc[0]])
+                region = point.buffer(2000).bounds() # 2km 영역
+                
+                # 해당 영역의 평균값 계산
+                stat = data_layer.reduceRegion(
+                    reducer=ee.Reducer.mean(),
+                    geometry=region,
+                    scale=1000,
+                    maxPixels=1e9
+                )
+                
+                # rh98 또는 elev_lowestmode 키 동적으로 가져오기
+                keys = stat.keys().getInfo()
+                if keys:
+                    val = stat.get(keys[0]).getInfo()
+                    if val is not None:
+                        st.metric(label=f"주변 {analysis_type} 평균", value=f"{val:.2f} m")
+                    else:
+                        st.warning("이 지역의 최근 유효 데이터가 부족합니다.")
+                else:
+                    st.warning("데이터 로딩 중...")
+        except Exception as e:
+            st.error(f"통계 추출 오류: {e}")
 
         st.divider()
-        st.caption("참고: GEDI 데이터는 궤도 위성 데이터이므로, 분석 지역에 따라 1km 격자 기반의 평균값이 표시됩니다.")
+
+        # 2. 색상 범례(Legend) 추가
+        st.markdown("**🎨 색상 범례 (m)**")
+        if analysis_type == "수관 상단 높이 (Canopy Height)":
+            legend_html = """
+            <div style="font-size: 12px; margin-bottom: 5px;">
+                <span style="background:red; padding: 2px 10px;"></span> 35m+ (높은 숲)<br>
+                <span style="background:orange; padding: 2px 10px;"></span> 25~35m<br>
+                <span style="background:yellow; padding: 2px 10px;"></span> 15~25m (중급 숲)<br>
+                <span style="background:green; padding: 2px 10px;"></span> 5~15m<br>
+                <span style="background:cyan; padding: 2px 10px;"></span> 0~5m (낮은 지대)<br>
+                <span style="background:blue; padding: 2px 10px;"></span> 수역/데이터 없음
+            </div>
+            """
+            st.markdown(legend_html, unsafe_allow_html=True)
+            st.info("💡 **RH98:** 상위 98% 지점의 높이(수관 키)")
+        else:
+            st.info("💡 **Elevation:** 지면의 실제 해발 고도입니다.")
+
+        st.divider()
+        st.caption("참고: GEDI 데이터는 위성 궤도 데이터이므로 지점 간 1km 격자 데이터가 없는 구역은 빈 칸으로 나타날 수 있습니다.")
 
 # -- 3. AI 탐사선 모드 --
 else:
