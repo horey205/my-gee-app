@@ -261,14 +261,26 @@ elif mode == "GEDI 산림 정밀 분석":
                     features = samples.getInfo()['features']
                     
                     if features:
+                        # CloudCompare 등 3D 툴을 위해 미터 단위 좌표(EPSG:3857)도 함께 추출
+                        try:
+                            features_meter = samples.transform('EPSG:3857').getInfo()['features']
+                        except:
+                            features_meter = features # 실패 시 기본 좌표 사용
+                        
                         data_list = []
-                        for f in features:
-                            coords = f['geometry']['coordinates']
+                        for idx, f in enumerate(features):
+                            coords_deg = f['geometry']['coordinates']
+                            # 미터 좌표가 있으면 사용, 없으면 도 단위 대입
+                            coords_meter = features_meter[idx]['geometry']['coordinates'] if idx < len(features_meter) else coords_deg
+                            
                             props = f['properties']
                             val = list(props.values())[0] if props else 0
+                            
                             data_list.append({
-                                'Latitude': coords[1],
-                                'Longitude': coords[0],
+                                'X_meters(3857)': coords_meter[0],
+                                'Y_meters(3857)': coords_meter[1],
+                                'Latitude': coords_deg[1],
+                                'Longitude': coords_deg[0],
                                 f'{analysis_type} (m)': val
                             })
                         
