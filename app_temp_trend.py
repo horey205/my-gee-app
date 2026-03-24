@@ -140,35 +140,33 @@ elif mode == "GEDI 산림 정밀 분석":
         # GEDI 데이터 로드 (L2A Monthly)
         dataset = ee.ImageCollection("LARSE/GEDI/GEDI02_A_002_MONTHLY")
         
-        # 최신 데이터 위주로 평균값 처리 및 서버 사이드 시각화
+        # 최신 데이터 위주로 평균값 처리 및 서버 사이드 시각화 분리
         if analysis_type == "수관 상단 높이 (Canopy Height)":
-            # 1. 원본 데이터 선택 및 배경 투명화
+            # 1. 계산용 원본 데이터 (Raw Data)
             raw_data = dataset.select('rh98').mean().selfMask()
             
-            # 2. 서버에서 직접 색상을 입힘 (visualize) - 이 방식이 가장 확실함
-            data_layer = raw_data.visualize(
+            # 2. 지도 표시용 그림 데이터 (Visualized Image)
+            data_to_map = raw_data.visualize(
                 min=3, 
                 max=45, 
                 palette=['green', 'lime', 'yellow', 'orange', 'red']
             )
-            vis_params = {} # visualize를 썼으므로 비움
             label = "Canopy Height (m)"
         else:
-            # 지면 고도 데이터도 동일하게 서버 사이드 시각화 적용
-            raw_elev = dataset.select('elev_lowestmode').mean().selfMask()
-            data_layer = raw_elev.visualize(
+            # 지면 고도 데이터도 계산용과 표시용 분리
+            raw_data = dataset.select('elev_lowestmode').mean().selfMask()
+            data_to_map = raw_data.visualize(
                 min=0, 
                 max=1500, 
                 palette=['blue', 'cyan', 'green', 'yellow', 'red']
             )
-            vis_params = {} # visualize를 썼으므로 비움
             label = "Elevation (m)"
 
-        # 지도 설정
+        # 지도 설정 (표시용 데이터 사용)
         loc = area_options[selected_area]["center"]
         zoom = area_options[selected_area]["zoom"]
         
-        map_id_dict = ee.data.getMapId({'image': data_layer, 'visParams': vis_params})
+        map_id_dict = ee.data.getMapId({'image': data_to_map})
         m_gedi = folium.Map(location=loc, zoom_start=zoom, tiles="cartodbpositron")
         folium.TileLayer(
             tiles=map_id_dict['tile_fetcher'].url_format, 
@@ -177,7 +175,7 @@ elif mode == "GEDI 산림 정밀 분석":
             overlay=True
         ).add_to(m_gedi)
         
-        # 범례 추가 (V2.1 대응)
+        # 범례 추가
         folium.LayerControl().add_to(m_gedi)
         folium_static(m_gedi, height=650)
 
@@ -187,14 +185,14 @@ elif mode == "GEDI 산림 정밀 분석":
         st.write(f"**데이터:** NASA GEDI (Latest)")
         st.divider()
 
-        # 1. 중심점 기준 수치 추출 및 대시보드 표시
+        # 1. 중심점 기준 수치 추출 및 대시보드 표시 (원본 데이터 'raw_data' 사용)
         try:
             with st.spinner("수치 데이터를 계산 중..."):
                 point = ee.Geometry.Point([loc[1], loc[0]])
                 region = point.buffer(2000).bounds() # 2km 영역
                 
-                # 해당 영역의 평균값 계산
-                stat = data_layer.reduceRegion(
+                # 원본 수치 raw_data를 이용해 통계 계산
+                stat = raw_data.reduceRegion(
                     reducer=ee.Reducer.mean(),
                     geometry=region,
                     scale=1000,
