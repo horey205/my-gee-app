@@ -205,7 +205,7 @@ elif mode == "GEDI 산림 정밀 분석":
         try:
             with st.spinner("중심점 데이터 분석 중..."):
                 point = ee.Geometry.Point([calc_loc[1], calc_loc[0]])
-                region = point.buffer(2000).bounds() # 2km 영역
+                region = point.buffer(500).bounds() # 500m 영역 (더 민감한 반응성)
                 
                 # 원본 수치 raw_data를 이용해 통계 계산 (정밀도 상향: scale 1000 -> 30)
                 # 평균(Mean)과 최대값(Max)을 동시에 추출 (표준 API 문법 적용)
@@ -226,10 +226,10 @@ elif mode == "GEDI 산림 정밀 분석":
                     max_key = next((k for k in res.keys() if 'max' in k.lower()), None)
                     
                     if mean_key and res[mean_key] is not None:
-                        st.metric(label=f"주변 {analysis_type} 평균", value=f"{res[mean_key]:.2f} m")
+                        st.metric(label=f"주변 500m {analysis_type} 평균", value=f"{res[mean_key]:.2f} m")
                     
                     if max_key and res[max_key] is not None:
-                        st.metric(label=f"영역 내 최고 높이 (Peak)", value=f"{res[max_key]:.2f} m")
+                        st.metric(label=f"구역 내 최고 높이 (Peak)", value=f"{res[max_key]:.2f} m")
                 else:
                     st.warning("데이터가 없는 구역입니다 (위성 궤도 밖).")
         except Exception as e:
