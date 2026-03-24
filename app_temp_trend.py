@@ -148,10 +148,11 @@ elif mode == "GEDI 산림 정밀 분석":
             raw_data = dataset.select('rh98').mean().selfMask()
             
             # 2. 지도 표시용 그림 데이터 (Visualized Image)
+            # 색상 동기화: 진녹색(0-10m) - 연녹색(10-20m) - 노랑(20-30m) - 주황(30-40m) - 빨강(40m+)
             data_to_map = raw_data.visualize(
                 min=3, 
                 max=45, 
-                palette=['green', 'lime', 'yellow', 'orange', 'red']
+                palette=['006400', '32cd32', 'ffff00', 'ff8c00', 'ff0000']
             )
             label = "Canopy Height (m)"
         else:
@@ -183,7 +184,7 @@ elif mode == "GEDI 산림 정밀 분석":
         
         # folium_static 대신 st_folium 사용하여 실시간 상호작용 활성화
         from streamlit_folium import st_folium
-        map_output = st_folium(m_gedi, height=650, width=None, key="gedi_map")
+        map_output = st_folium(m_gedi, height=650, width=900, key="gedi_map")
 
     with col2:
         st.subheader("📊 실시간 분석 지표")
@@ -220,7 +221,7 @@ elif mode == "GEDI 산림 정밀 분석":
                     if val is not None:
                         st.metric(label=f"주변 {analysis_type} 평균", value=f"{val:.2f} m")
                     else:
-                        st.warning("이 지역의 최근 유효 데이터가 부족합니다.")
+                        st.warning("데이터가 없는 구역입니다.")
                 else:
                     st.warning("데이터 로딩 중...")
         except Exception as e:
@@ -233,18 +234,18 @@ elif mode == "GEDI 산림 정밀 분석":
         if analysis_type == "수관 상단 높이 (Canopy Height)":
             legend_html = """
             <div style="font-size: 13px; font-weight: bold;">
-                <span style="background:#bd0026; padding: 2px 10px; color:white;"></span> 40m+ (매우 높은 숲)<br>
-                <span style="background:#fd8d3c; padding: 2px 10px;"></span> 30~40m<br>
-                <span style="background:#fed976; padding: 2px 10px;"></span> 20~30m (일반 숲)<br>
-                <span style="background:#ffffcc; padding: 2px 10px;"></span> 10~20m (낮은 숲)<br>
-                <span style="background:#74c476; padding: 2px 10px;"></span> 0~10m (관목/지면)<br>
-                <span style="background:#f7fcf5; border:1px solid gray; padding: 2px 10px;"></span> 0m (데이터 없음)
+                <span style="background:#ff0000; padding: 2px 10px; color:white;"></span> 40m+ (매우 높은 숲)<br>
+                <span style="background:#ff8c00; padding: 2px 10px;"></span> 30~40m (높은 숲)<br>
+                <span style="background:#ffff00; padding: 2px 10px;"></span> 20~30m (일반 숲)<br>
+                <span style="background:#32cd32; padding: 2px 10px;"></span> 10~20m (낮은 숲 / 관목)<br>
+                <span style="background:#006400; padding: 2px 10px; color:white;"></span> 0~10m (지면 부근/어린 숲)<br>
+                <div style="margin-top: 5px; font-weight: normal; font-size: 11px;">※ 색상은 주변 2km 평균값과 비례합니다.</div>
             </div>
             """
             st.markdown(legend_html, unsafe_allow_html=True)
-            st.info("💡 **RH98:** 상위 98% 지점의 높이(수관 키)")
+            st.info("💡 **RH98:** 상위 98% 지점의 높이 (수관 키)")
         else:
-            st.info("💡 **Elevation:** 지면의 실제 해발 고도입니다.")
+            st.info("💡 **Elevation:** 지면의 실제 해발 고도 (Meter 단위 보정됨)")
 
         st.divider()
         st.caption("참고: GEDI 데이터는 위성 궤도 데이터이므로 지점 간 1km 격자 데이터가 없는 구역은 빈 칸으로 나타날 수 있습니다.")
