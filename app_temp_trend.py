@@ -249,8 +249,10 @@ elif mode == "GEDI 산림 정밀 분석":
                         ne = map_output["bounds"]["_northEast"]
                         export_region = ee.Geometry.Rectangle([sw["lng"], sw["lat"], ne["lng"], ne["lat"]])
                     
-                    # 샘플링 개수를 늘려 화면 내 모든 노선을 포함 (최대 10,000개)
-                    samples = raw_data.sample(
+                    # 샘플링 시 수목높이(rh98)와 지면고도(elev)를 통합 추출 (3D 숲 구성용)
+                    export_raw = dataset.select(['rh98', 'elev_lowestmode']).filterBounds(export_region).mean()
+                    
+                    samples = export_raw.sample(
                         region=export_region,
                         scale=30,
                         numPixels=10000,
@@ -264,26 +266,28 @@ elif mode == "GEDI 산림 정밀 분석":
                         # CloudCompare 등 3D 툴을 위해 미터 단위 좌표(EPSG:3857)도 함께 추출
                         try:
                             # 개별 피처의 지오메트리를 EPSG:3857(미터 단위)로 명시적 재투영
-                            # .map()을 통해 각 점의 좌표 숫자 자체를 미터로 변환합니다.
                             features_meter = samples.map(lambda f: f.setGeometry(f.geometry().transform('EPSG:3857', 1))).getInfo()['features']
                         except:
-                            features_meter = features # 실패 시 기본 좌표 사용
+                            features_meter = features
                         
                         data_list = []
                         for idx, f in enumerate(features):
                             coords_deg = f['geometry']['coordinates']
-                            # 미터 좌표로 변환된 값 사용
                             coords_meter = features_meter[idx]['geometry']['coordinates'] if idx < len(features_meter) else coords_deg
                             
                             props = f['properties']
-                            val = list(props.values())[0] if props else 0
+                            # rh98(수목높이)과 elev_lowestmode(지면고도, 피트->미터 변환) 추출
+                            rh98_val = props.get('rh98', 0)
+                            elev_val = props.get('elev_lowestmode', 0) * 0.3048
                             
                             data_list.append({
                                 'X_meters(3857)': coords_meter[0],
                                 'Y_meters(3857)': coords_meter[1],
                                 'Latitude': coords_deg[1],
                                 'Longitude': coords_deg[0],
-                                f'{analysis_type} (m)': val
+                                'Ground_Elevation(m)': elev_val,
+                                'Canopy_Height(m)': rh98_val,
+                                'Total_Altitude(m)': elev_val + rh98_val
                             })
                         
                         import pandas as pd
