@@ -178,18 +178,29 @@ elif mode == "GEDI 산림 정밀 분석":
         
         # 범례 추가
         folium.LayerControl().add_to(m_gedi)
-        folium_static(m_gedi, height=650)
+        
+        # folium_static 대신 st_folium 사용하여 실시간 상호작용 활성화
+        from streamlit_folium import st_folium
+        map_output = st_folium(m_gedi, height=650, width=None, key="gedi_map")
 
     with col2:
-        st.subheader("📊 정밀 분석 지표")
-        st.write(f"**현재 위치:** {selected_area}")
+        st.subheader("📊 실시간 분석 지표")
+        
+        # 현재 지도의 중심 좌표 가져오기 (사용자가 지도를 움직인 경우)
+        calc_loc = loc
+        if map_output and map_output.get("center"):
+            calc_loc = [map_output["center"]["lat"], map_output["center"]["lng"]]
+            st.write(f"**현재 관측지:** [{calc_loc[0]:.4f}, {calc_loc[1]:.4f}]")
+        else:
+            st.write(f"**현재 위치:** {selected_area}")
+
         st.write(f"**데이터:** NASA GEDI (Latest)")
         st.divider()
 
-        # 1. 중심점 기준 수치 추출 및 대시보드 표시 (원본 데이터 'raw_data' 사용)
+        # 1. 중심점 기준 수치 추출 및 대시보드 표시 (실시간 좌표 사용)
         try:
-            with st.spinner("수치 데이터를 계산 중..."):
-                point = ee.Geometry.Point([loc[1], loc[0]])
+            with st.spinner("중심점 데이터 분석 중..."):
+                point = ee.Geometry.Point([calc_loc[1], calc_loc[0]])
                 region = point.buffer(2000).bounds() # 2km 영역
                 
                 # 원본 수치 raw_data를 이용해 통계 계산
