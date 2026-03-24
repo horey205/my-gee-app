@@ -142,19 +142,22 @@ elif mode == "GEDI 산림 정밀 분석":
         
         # 최신 데이터 위주로 평균값 계산
         if analysis_type == "수관 상단 높이 (Canopy Height)":
-            # rh98: 98th percentile of relative height (Top of canopy)
-            data_layer = dataset.select('rh98').mean()
-            # 팔레트 개선: 검은색 느낌이 어두운 파란색 대신 밝은 녹색 계열 사용
+            # selfMask()로 데이터가 없는 지점(0 또는 null)을 투명하게 처리 (검은 배경 제거)
+            data_layer = dataset.select('rh98').mean().selfMask()
+            
+            # 팔레트 개선: 검은색 느낌이 없는 선명하고 밝은 색상 (연두-녹색-노랑-주황-빨강)
             vis_params = {
-                'min': 0, 'max': 50, 
-                'palette': ['#f7fcf5', '#c7e9c0', '#74c476', '#238b45', '#ffffcc', '#fed976', '#fd8d3c', '#bd0026']
+                'min': 3, # 3m 이하의 지면 노이즈 제외
+                'max': 45, 
+                'palette': ['#d9f0a3', '#78c679', '#238b45', '#ffff33', '#fe9929', '#e31a1c']
             }
             label = "Canopy Height (m)"
         else:
-            data_layer = dataset.select('elev_lowestmode').mean()
+            # 지면 고도 데이터도 투명화 및 시각화 개선
+            data_layer = dataset.select('elev_lowestmode').mean().selfMask()
             vis_params = {
                 'min': 0, 'max': 1500, 
-                'palette': ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#fee090', '#f4a582', '#d73027', '#a50026']
+                'palette': ['#0000ff', '#00ffff', '#ffff00', '#ff0000', '#ffffff'] # 고도에 따른 색상 시퀀스
             }
             label = "Elevation (m)"
 
