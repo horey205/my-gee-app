@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# GEE Keys (Sensitive)
+*.json
+
+# Other
+.DS_Store
+.devcontainer/
